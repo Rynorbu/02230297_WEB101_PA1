@@ -1,11 +1,41 @@
 // Initialization and Fetching Pokemon List
+let seenPokemons = [];
+let unseenPokemons = [];
+
 document.addEventListener('DOMContentLoaded', async () => {
+    let offset = 0;
+    const limit = 10;
+    await fetchAndDisplayPokemons(offset, limit);
+
+    // Add scroll event listener
+    window.addEventListener('scroll', async () => {
+        if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight) {
+            offset += limit;
+            await fetchAndDisplayPokemons(offset, limit);
+        }
+    });
+
+    // Add click event listeners for seen and not seen links
+    const seenLink = document.getElementById('seen-link');
+    const notSeenLink = document.getElementById('not-seen-link');
+
+    seenLink.addEventListener('click', () => {
+        displayPokemonList(seenPokemons);
+    });
+
+    notSeenLink.addEventListener('click', () => {
+        displayPokemonList(unseenPokemons);
+    });
+});
+
+async function fetchAndDisplayPokemons(offset, limit) {
     try {
-        const response = await fetch('https://pokeapi.co/api/v2/pokemon?limit=10'); 
+        const response = await fetch(`https://pokeapi.co/api/v2/pokemon?offset=${offset}&limit=${limit}`);
         if (!response.ok) throw new Error('Network response was not ok');
         const data = await response.json();
 
         const pokemonList = document.getElementById('pokemon_list');
+
         for (const pokemon of data.results) {
             const pokemonDetailResponse = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemon.name}`);
             const pokemonDetail = await pokemonDetailResponse.json();
@@ -50,11 +80,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             pokemonList.appendChild(pokemonElement);
+
+            // Update the unseen Pokemon list
+            if (!seenPokemons.includes(pokemon.name)) {
+                unseenPokemons.push(pokemon.name);
+            }
         }
     } catch (error) {
         console.error('There was a problem with the fetch operation:', error);
     }
-});
+}
 
 // Function to display Pokemon details
 async function displayPokemonDetails(pokemonName) {
@@ -102,12 +137,59 @@ async function displayPokemonDetails(pokemonName) {
         abilitiesElement.textContent = `Abilities: ${abilitiesData.abilities.map(ability => ability.ability.name).join(', ')}`;
         container.appendChild(abilitiesElement);
 
+        // Update the seen and unseen Pokemon lists
+        if (!seenPokemons.includes(pokemonName)) {
+            seenPokemons.push(pokemonName);
+            unseenPokemons = unseenPokemons.filter(p => p !== pokemonName);
+        }
     } catch (error) {
         console.error('There was a problem with the fetch operation:', error);
         // Optionally, display an error message to the user
         container.innerHTML = `<p>${error.message}</p>`;
     }
 }
+
+// Function to display the list of seen or unseen Pokemon
+async function displayPokemonList(pokemonList) {
+    const pokemonListElement = document.getElementById('pokemon_list');
+    pokemonListElement.innerHTML = ''; // Clear the existing list
+
+    for (const pokemonName of pokemonList) {
+        const pokemonElement = document.createElement('div');
+        pokemonElement.classList.add('pokemon');
+
+        // Display Pokemon number
+        const pokemonDetailResponse = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonName}`);
+        const pokemonDetail = await pokemonDetailResponse.json();
+        const numberElement = document.createElement('p');
+        numberElement.textContent = `#${pokemonDetail.id}`;
+        pokemonElement.appendChild(numberElement);
+
+        // Display Pokemon image
+        const imgElement = document.createElement('img');
+        imgElement.src = pokemonDetail.sprites.front_default;
+        imgElement.alt = pokemonName;
+        pokemonElement.appendChild(imgElement);
+
+        // Display Pokemon name
+        const nameElement = document.createElement('h3');
+        nameElement.textContent = `Name: ${pokemonName}`;
+        pokemonElement.appendChild(nameElement);
+
+        // Add click event listener to display Pokemon details
+        pokemonElement.addEventListener('click', async () => {
+            // Hide all Pokemon containers
+            const allPokemonContainers = document.querySelectorAll('.pokemon');
+            allPokemonContainers.forEach(container => container.style.display = 'none');
+
+            // Display Pokemon details
+            await displayPokemonDetails(pokemonName);
+        });
+
+        pokemonListElement.appendChild(pokemonElement);
+    }
+}
+
 
 // Enhanced Search Functionality
 document.addEventListener('DOMContentLoaded', () => {
@@ -132,12 +214,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!response.ok) throw new Error('Pokemon not found');
                 const pokemon = await response.json();
                 await displayPokemonDetails(pokemon.name);
+
+                // Update the seen and unseen Pokemon lists
+                if (!seenPokemons.includes(pokemon.name)) {
+                    seenPokemons.push(pokemon.name);
+                    unseenPokemons = unseenPokemons.filter(p => p !== pokemon.name);
+                }
             } else {
                 // Fetch Pokemon by name
                 await displayPokemonDetails(searchValue);
+
+                // Update the seen and unseen Pokemon lists
+                if (!seenPokemons.includes(searchValue)) {
+                    seenPokemons.push(searchValue);
+                    unseenPokemons = unseenPokemons.filter(p => p !== searchValue);
+                }
             }
-            // fetch pokempn bu image 
-            
         } catch (error) {
             console.error('There was a problem with the fetch operation:', error);
             // Optionally, display an error message to the user

@@ -231,3 +231,15 @@ body {
     font-size: 14px;
     color: #777;
 }
+
+/* Fixed pixel values */
+.pokemon {
+    width: 145px;
+    padding: 10px;
+  }
+  
+  /* Responsive values */
+  .pokemon {
+    width: 10rem;
+    padding: 0.7rem;
+  }
